@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"io"
 )
 
 type FetchResult struct {
@@ -17,21 +18,28 @@ func worker(id int, jobs <-chan string, results chan<- FetchResult, wg *sync.Wai
 	defer wg.Done()
 	for url := range jobs {
 		resp, err := http.Get(url)
+
+		// read body to get size
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
 		if err != nil {
 			results <- FetchResult{URL: url, Error: err}
 			continue
 		}
+
+
 		defer resp.Body.Close()
 		results <- FetchResult{
 			URL:        url,
 			StatusCode: resp.StatusCode,
-			Size:       resp.ContentLength,
+			Size:       int64(len(body)),
 			Error:      nil,
 		}
 	}
 }
 
-func main() {z
+func main() {
 	urls := []string{
 		"https://www.example.com",
 		"https://www.golang.org",
