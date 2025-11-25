@@ -17,7 +17,7 @@ type FetchResult struct {
 }
 
 //Worker function
-func worker(id int, jobs <-chan string, results chan<- FetchResult) {
+func worker(id int, jobs <-chan string, results chan<- FetchResult, wg *sync.WaitGroup) {
 	// TODO: fetch the url
 	// TODO: send Result struct to results channel
 	// hint: use resp, err := http.Get(url)
@@ -47,8 +47,10 @@ func main() {
 	results := make(chan FetchResult, len(urls))
 
 	// TODO: Start workers
+	var wg sync.WaitGroup
 	for i := 1; i <= numWorkers ; i++ {
-		go worker(i, jobs, results)
+		wg.Add(1)
+		go worker(i, jobs, results, &wg)
 	}
 
 	// TODO: Send jobs 
@@ -56,13 +58,15 @@ func main() {
 		jobs <- urls[n]
 	}
 	close (jobs)
+	wg.Wait()
+	close(results)
 	// TODO: Collect results
-	for result := range results{
-		fmt.Println(result)
-	} 
-	go func(){
-		wg.Wait()
-		close(results)	
-	}()
-	fmt.Println("\nScraping complete!")	
+	for result := range results {
+		if result.Error != nil {
+			fmt.Printf("Error fetching %s: %v\n", result.URL, result.Error)
+		} else {
+			fmt.Printf("%s | Status Code: %d | Size: %d bytes\n",
+				result.URL, result.StatusCode, result.Size)
+		}
+	}
 }
