@@ -57,6 +57,7 @@ func main() {
 	for n := 0; n <= len(urls)-1; n++ {
 		jobs <- urls[n]
 	}
+	
 	close (jobs)
 	wg.Wait()
 	close(results)
